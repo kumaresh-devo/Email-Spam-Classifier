@@ -1,12 +1,3 @@
-"""
-Email Spam Classifier - Model Training Script
-=============================================
-This script loads the labeled email/SMS spam dataset, performs text
-preprocessing and TF-IDF feature extraction, trains a Multinomial Naive
-Bayes classifier, evaluates performance (Accuracy and Precision), and
-saves the trained model artifacts for real-time inference.
-"""
-
 import os
 import re
 import json
@@ -27,19 +18,12 @@ MODEL_PATH = os.path.join(MODELS_DIR, "spam_model.pkl")
 VECTORIZER_PATH = os.path.join(MODELS_DIR, "tfidf_vectorizer.pkl")
 METRICS_PATH = os.path.join(MODELS_DIR, "metrics.json")
 
-# Fallback dataset URL if local dataset is missing
+
 DATASET_URL = "https://raw.githubusercontent.com/justmarkham/DAT8/master/data/sms.tsv"
 
 
 def clean_text(text: str) -> str:
-    """
-    Cleans raw email/message text for NLP feature extraction.
-    1. Converts text to lowercase.
-    2. Removes URLs and web links.
-    3. Removes HTML tags if present.
-    4. Removes special punctuation/symbols while keeping alphanumeric words.
-    5. Normalizes whitespace.
-    """
+  
     if not isinstance(text, str):
         text = str(text) if text is not None else ""
     text = text.lower()
@@ -51,10 +35,7 @@ def clean_text(text: str) -> str:
 
 
 def ensure_dataset_exists() -> str:
-    """
-    Ensures that dataset/spam.csv exists. If not found, downloads the
-    authentic UCI SMS/Email Spam Collection dataset automatically.
-    """
+  
     os.makedirs(DATASET_DIR, exist_ok=True)
     if not os.path.exists(DATASET_PATH):
         print(f"Dataset not found at: {DATASET_PATH}")
@@ -74,11 +55,7 @@ def ensure_dataset_exists() -> str:
 
 
 def train_and_evaluate(quiet: bool = False):
-    """
-    Trains the Multinomial Naive Bayes model on the spam dataset,
-    evaluates Accuracy and Precision dynamically on the test set,
-    and serializes the model, vectorizer, and metrics to disk.
-    """
+ 
     csv_file = ensure_dataset_exists()
 
     if not quiet:
@@ -93,7 +70,7 @@ def train_and_evaluate(quiet: bool = False):
         if "label" not in df.columns or "message" not in df.columns:
             raise ValueError("Dataset must contain 'label' and 'message' columns.")
 
-    # Handle missing values
+   
     df.dropna(subset=["label", "message"], inplace=True)
     df["label"] = df["label"].astype(str).str.strip().str.lower()
     df = df[df["label"].isin(["ham", "spam"])]
@@ -102,15 +79,15 @@ def train_and_evaluate(quiet: bool = False):
         print(f"      Total samples: {len(df)} (Ham: {(df['label'] == 'ham').sum()}, Spam: {(df['label'] == 'spam').sum()})")
         print("[2/5] Cleaning text and preprocessing...")
 
-    # Text cleaning
+  
     df["cleaned_message"] = df["message"].apply(clean_text)
-    # Remove any messages that became empty after cleaning
+
     df = df[df["cleaned_message"].str.len() > 0]
 
-    # Map labels: ham -> 0, spam -> 1
+    
     df["target"] = df["label"].map({"ham": 0, "spam": 1})
 
-    # Train / test split (80% train, 20% test with stratified sampling)
+   
     if not quiet:
         print("[3/5] Splitting dataset (80% train, 20% test)...")
     X_train, X_test, y_train, y_test = train_test_split(
@@ -121,7 +98,7 @@ def train_and_evaluate(quiet: bool = False):
         stratify=df["target"],
     )
 
-    # Feature extraction using TF-IDF
+
     if not quiet:
         print("[4/5] Extracting TF-IDF features and training Naive Bayes model...")
     vectorizer = TfidfVectorizer(
@@ -133,16 +110,16 @@ def train_and_evaluate(quiet: bool = False):
     X_train_vec = vectorizer.fit_transform(X_train)
     X_test_vec = vectorizer.transform(X_test)
 
-    # Train Naive Bayes Classifier
+
     model = MultinomialNB(alpha=0.2)
     model.fit(X_train_vec, y_train)
 
-    # Model Evaluation on the held-out test dataset
+   
     if not quiet:
         print("[5/5] Evaluating model performance on test set...")
     y_pred = model.predict(X_test_vec)
 
-    # Dynamic metrics calculation
+ 
     accuracy = float(accuracy_score(y_test, y_pred) * 100)
     precision = float(precision_score(y_test, y_pred, pos_label=1) * 100)
 
